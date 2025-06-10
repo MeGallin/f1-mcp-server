@@ -93,14 +93,13 @@ class F1ApiClient {
       return error;
     }
   }
-
   /**
    * Health check - verify API proxy is available
    * @returns {Promise<boolean>}
    */
   async healthCheck() {
     try {
-      const response = await this.client.get('/api/health');
+      const response = await this.client.get('/health');
       return response.status === 200;
     } catch (error) {
       logger.error('F1 API health check failed', error);

@@ -3,6 +3,10 @@ import 'dotenv/config';
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 import logger from './utils/logger.js';
 import f1ApiClient from './services/f1ApiClient.js';
 
@@ -63,7 +67,6 @@ class F1MCPServer {
       process.exit(0);
     });
   }
-
   /**
    * Register all F1 tools with the MCP server
    * @private
@@ -77,32 +80,58 @@ class F1MCPServer {
       resultsTools,
     ];
 
-    // Register tools from all categories
+    // Collect all tools
+    const allTools = [];
     toolCategories.forEach((category) => {
-      category.getTools().forEach((tool) => {
-        this.server.setRequestHandler(
-          { method: 'tools/call', name: tool.name },
-          tool.handler,
-        );
-      });
+      allTools.push(...category.getTools());
+    });
+
+    // Register tool call handler
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const toolName = request.params.name;
+      const tool = allTools.find((t) => t.name === toolName);
+
+      if (!tool) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text',
+              text: `Unknown tool: ${toolName}`,
+            },
+          ],
+        };
+      }
+
+      try {
+        return await tool.handler(request);
+      } catch (error) {
+        logger.error(`Error executing tool ${toolName}:`, error);
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text',
+              text: `Error executing tool: ${error.message}`,
+            },
+          ],
+        };
+      }
     });
 
     logger.info('Registered F1 MCP tools', {
-      totalTools: toolCategories.reduce(
-        (sum, category) => sum + category.getTools().length,
-        0,
-      ),
+      totalTools: allTools.length,
+      toolNames: allTools.map((t) => t.name),
       categories: toolCategories.map((category) => category.constructor.name),
     });
   }
-
   /**
    * Setup MCP request handlers
    * @private
    */
   setupRequestHandlers() {
     // Handle tools/list requests
-    this.server.setRequestHandler({ method: 'tools/list' }, async () => {
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       const allTools = [
         ...seasonsTools.getTools(),
         ...racesTools.getTools(),
@@ -118,11 +147,6 @@ class F1MCPServer {
           inputSchema: tool.inputSchema,
         })),
       };
-    });
-
-    // Handle ping requests
-    this.server.setRequestHandler({ method: 'ping' }, async () => {
-      return {};
     });
   }
 
