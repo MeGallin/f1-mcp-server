@@ -186,9 +186,7 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getDriver(driverId, season = 'current') {
-    const response = await this.client.get(
-      `/drivers/${season}/${driverId}`,
-    );
+    const response = await this.client.get(`/drivers/${season}/${driverId}`);
     return response.data;
   }
 
@@ -258,9 +256,7 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getConstructorStandings(season = 'current') {
-    const response = await this.client.get(
-      `/results/${season}/constructors`,
-    );
+    const response = await this.client.get(`/results/${season}/constructors`);
     return response.data;
   }
 }
