@@ -92,8 +92,7 @@ class F1ApiClient {
       // Request setup error
       return error;
     }
-  }
-  /**
+  } /**
    * Health check - verify API proxy is available
    * @returns {Promise<boolean>}
    */
@@ -102,8 +101,11 @@ class F1ApiClient {
       const response = await this.client.get('/health');
       return response.status === 200;
     } catch (error) {
-      logger.error('F1 API health check failed', error);
-      throw new Error('F1 API proxy is not available');
+      logger.warn('F1 API health check failed', {
+        error: error.message,
+        baseURL: this.baseURL,
+      });
+      return false;
     }
   }
 

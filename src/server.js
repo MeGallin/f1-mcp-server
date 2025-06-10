@@ -148,16 +148,30 @@ class F1MCPServer {
         })),
       };
     });
-  }
-
-  /**
+  } /**
    * Start the MCP server
    */
   async start() {
     try {
-      // Verify F1 API connection
-      await f1ApiClient.healthCheck();
-      logger.info('F1 API proxy connection verified');
+      // Verify F1 API connection (optional in production)
+      const isApiAvailable = await f1ApiClient.healthCheck();
+
+      if (isApiAvailable) {
+        logger.info('F1 API proxy connection verified');
+      } else {
+        if (process.env.NODE_ENV === 'production') {
+          logger.warn(
+            'F1 API proxy not available, but continuing in production mode',
+            {
+              apiProxyUrl: process.env.F1_API_PROXY_URL,
+            },
+          );
+        } else {
+          throw new Error(
+            'F1 API proxy is not available and required in development mode',
+          );
+        }
+      }
 
       // Start server with stdio transport
       const transport = new StdioServerTransport();
@@ -167,6 +181,8 @@ class F1MCPServer {
         serverName: process.env.MCP_SERVER_NAME,
         version: process.env.MCP_SERVER_VERSION,
         apiProxyUrl: process.env.F1_API_PROXY_URL,
+        environment: process.env.NODE_ENV,
+        apiAvailable: isApiAvailable,
       });
     } catch (error) {
       logger.error('Failed to start F1 MCP Server:', error);
