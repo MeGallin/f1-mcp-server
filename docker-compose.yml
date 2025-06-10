@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  f1-mcp-server:
+    build: .
+    container_name: f1-mcp-server
+    environment:
+      - NODE_ENV=production
+      - MCP_SERVER_NAME=f1-mcp-server
+      - MCP_SERVER_VERSION=1.0.0
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=3001
+      - F1_API_PROXY_URL=http://f1-api-proxy:8000
+      - F1_API_TIMEOUT=10000
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+    ports:
+      - '3001:3001'
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - f1-api-proxy
+    networks:
+      - f1-network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'node', '-e', "console.log('Health check')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Reference to the API proxy service
+  f1-api-proxy:
+    image: f1-api-proxy:latest
+    container_name: f1-api-proxy
+    ports:
+      - '8000:8000'
+    networks:
+      - f1-network
+    profiles:
+      - full-stack
+
+networks:
+  f1-network:
+    driver: bridge
