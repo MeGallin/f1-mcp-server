@@ -10,11 +10,13 @@ The F1 MCP Server can run in two modes:
 ## Deployment Modes
 
 ### stdio Mode (Local Development)
+
 - Uses Model Context Protocol via standard input/output
 - Communicates directly with LangGraph applications
 - Set `DEPLOY_MODE=stdio` in environment
 
 ### web Mode (Cloud Deployment)
+
 - Runs as HTTP web service
 - Provides health check and info endpoints
 - Required for Render.com and similar platforms
@@ -23,6 +25,7 @@ The F1 MCP Server can run in two modes:
 ## Render.com Deployment
 
 ### Environment Variables
+
 Set these in your Render.com service:
 
 ```
@@ -42,6 +45,7 @@ DEFAULT_SEASON=current
 ```
 
 ### Service Configuration
+
 - **Service Type**: Web Service
 - **Build Command**: `npm install`
 - **Start Command**: `npm start`
@@ -68,14 +72,17 @@ LangGraph → stdio → F1 MCP Server (stdio) → F1 API Proxy → Jolpica F1 AP
 ## Troubleshooting
 
 ### "No open ports detected" Error
+
 - **Cause**: Server was running in stdio mode on cloud platform
 - **Solution**: Set `DEPLOY_MODE=web` environment variable
 
-### Environment shows "development" 
+### Environment shows "development"
+
 - **Cause**: NODE_ENV not set to production
 - **Solution**: Set `NODE_ENV=production` environment variable
 
 ### MCP Tools Not Working
+
 - **Note**: In web mode, this is an HTTP wrapper. For actual MCP functionality, use stdio mode locally
 - The web mode provides information endpoints but doesn't implement full MCP protocol over HTTP
 

@@ -1,6 +1,7 @@
 # URGENT: Fix Render.com Deployment
 
 ## Issue
+
 Your f1-mcp-server is failing on Render.com with "No open ports detected" because it's running in stdio mode instead of web mode.
 
 ## Quick Fix

@@ -149,7 +149,7 @@ class F1MCPServer {
         })),
       };
     });
-  }  /**
+  } /**
    * Start the MCP server
    */
   async start() {
@@ -189,7 +189,7 @@ class F1MCPServer {
         apiProxyUrl: process.env.F1_API_PROXY_URL,
         environment: process.env.NODE_ENV,
         apiAvailable: isApiAvailable,
-        mode: process.env.DEPLOY_MODE || 'stdio'
+        mode: process.env.DEPLOY_MODE || 'stdio',
       });
     } catch (error) {
       logger.error('Failed to start F1 MCP Server:', error);
@@ -215,33 +215,46 @@ class F1MCPServer {
         server: process.env.MCP_SERVER_NAME,
         version: process.env.MCP_SERVER_VERSION,
         timestamp: new Date().toISOString(),
-        apiAvailable: true // We checked this in start()
+        apiAvailable: true, // We checked this in start()
       });
     });
 
     // MCP tools info endpoint
     app.get('/tools', (req, res) => {
       const tools = [];
-      
+
       // Get tool information from registered tools
-      if (this.server && this.server._capabilities && this.server._capabilities.tools) {
+      if (
+        this.server &&
+        this.server._capabilities &&
+        this.server._capabilities.tools
+      ) {
         // This is a simplified representation
         res.json({
           success: true,
           tools: [
-            'get_f1_seasons', 'get_current_f1_season',
-            'get_f1_races', 'get_f1_race_details', 'get_current_f1_race', 'get_next_f1_race',
-            'get_f1_drivers', 'get_f1_driver_details',
-            'get_f1_constructors', 'get_f1_constructor_details',
-            'get_f1_race_results', 'get_f1_qualifying_results', 'get_f1_driver_standings', 'get_f1_constructor_standings'
+            'get_f1_seasons',
+            'get_current_f1_season',
+            'get_f1_races',
+            'get_f1_race_details',
+            'get_current_f1_race',
+            'get_next_f1_race',
+            'get_f1_drivers',
+            'get_f1_driver_details',
+            'get_f1_constructors',
+            'get_f1_constructor_details',
+            'get_f1_race_results',
+            'get_f1_qualifying_results',
+            'get_f1_driver_standings',
+            'get_f1_constructor_standings',
           ],
-          totalTools: 14
+          totalTools: 14,
         });
       } else {
         res.json({
           success: true,
           tools: [],
-          totalTools: 0
+          totalTools: 0,
         });
       }
     });
@@ -255,9 +268,9 @@ class F1MCPServer {
         protocol: 'Model Context Protocol (MCP)',
         endpoints: {
           health: '/health',
-          tools: '/tools'
+          tools: '/tools',
         },
-        note: 'This is a web service wrapper for the MCP server. For actual MCP usage, connect via stdio transport.'
+        note: 'This is a web service wrapper for the MCP server. For actual MCP usage, connect via stdio transport.',
       });
     });
 
