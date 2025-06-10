@@ -110,13 +110,12 @@ class F1ApiClient {
   }
 
   // ==================== SEASONS ====================
-
   /**
    * Get all available seasons
    * @returns {Promise<Object>}
    */
   async getSeasons() {
-    const response = await this.client.get('/api/seasons');
+    const response = await this.client.get('/seasons');
     return response.data;
   }
 
@@ -125,19 +124,18 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getCurrentSeason() {
-    const response = await this.client.get('/api/seasons/current');
+    const response = await this.client.get('/seasons/current');
     return response.data;
   }
 
   // ==================== RACES ====================
-
   /**
    * Get races for a specific season
    * @param {string|number} season - Season year or 'current'
    * @returns {Promise<Object>}
    */
   async getRaces(season = 'current') {
-    const response = await this.client.get(`/api/races/${season}`);
+    const response = await this.client.get(`/races/${season}`);
     return response.data;
   }
 
@@ -148,7 +146,7 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getRace(season, round) {
-    const response = await this.client.get(`/api/races/${season}/${round}`);
+    const response = await this.client.get(`/races/${season}/${round}`);
     return response.data;
   }
 
@@ -157,7 +155,7 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getCurrentRace() {
-    const response = await this.client.get('/api/races/current/current');
+    const response = await this.client.get('/races/current/current');
     return response.data;
   }
 
@@ -166,19 +164,18 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getNextRace() {
-    const response = await this.client.get('/api/races/current/next');
+    const response = await this.client.get('/races/current/next');
     return response.data;
   }
 
   // ==================== DRIVERS ====================
-
   /**
    * Get drivers for a specific season
    * @param {string|number} season - Season year or 'current'
    * @returns {Promise<Object>}
    */
   async getDrivers(season = 'current') {
-    const response = await this.client.get(`/api/drivers/${season}`);
+    const response = await this.client.get(`/drivers/${season}`);
     return response.data;
   }
 
@@ -190,7 +187,7 @@ class F1ApiClient {
    */
   async getDriver(driverId, season = 'current') {
     const response = await this.client.get(
-      `/api/drivers/${season}/${driverId}`,
+      `/drivers/${season}/${driverId}`,
     );
     return response.data;
   }
@@ -203,10 +200,9 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getConstructors(season = 'current') {
-    const response = await this.client.get(`/api/constructors/${season}`);
+    const response = await this.client.get(`/constructors/${season}`);
     return response.data;
   }
-
   /**
    * Get specific constructor information
    * @param {string} constructorId - Constructor ID
@@ -215,7 +211,7 @@ class F1ApiClient {
    */
   async getConstructor(constructorId, season = 'current') {
     const response = await this.client.get(
-      `/api/constructors/${season}/${constructorId}`,
+      `/constructors/${season}/${constructorId}`,
     );
     return response.data;
   }
@@ -229,7 +225,7 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getRaceResults(season, round) {
-    const response = await this.client.get(`/api/results/${season}/${round}`);
+    const response = await this.client.get(`/results/${season}/${round}`);
     return response.data;
   }
 
@@ -241,7 +237,7 @@ class F1ApiClient {
    */
   async getQualifyingResults(season, round) {
     const response = await this.client.get(
-      `/api/results/${season}/${round}/qualifying`,
+      `/results/${season}/${round}/qualifying`,
     );
     return response.data;
   }
@@ -252,7 +248,7 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getDriverStandings(season = 'current') {
-    const response = await this.client.get(`/api/results/${season}/drivers`);
+    const response = await this.client.get(`/results/${season}/drivers`);
     return response.data;
   }
 
@@ -263,7 +259,7 @@ class F1ApiClient {
    */
   async getConstructorStandings(season = 'current') {
     const response = await this.client.get(
-      `/api/results/${season}/constructors`,
+      `/results/${season}/constructors`,
     );
     return response.data;
   }
