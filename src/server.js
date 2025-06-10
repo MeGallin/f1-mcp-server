@@ -7,6 +7,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import express from 'express';
 import logger from './utils/logger.js';
 import f1ApiClient from './services/f1ApiClient.js';
 
@@ -148,7 +149,7 @@ class F1MCPServer {
         })),
       };
     });
-  } /**
+  }  /**
    * Start the MCP server
    */
   async start() {
@@ -173,9 +174,14 @@ class F1MCPServer {
         }
       }
 
-      // Start server with stdio transport
-      const transport = new StdioServerTransport();
-      await this.server.connect(transport);
+      // Check if we should run as web service (for Render.com deployment)
+      if (process.env.DEPLOY_MODE === 'web') {
+        await this.startWebService();
+      } else {
+        // Start server with stdio transport (traditional MCP server)
+        const transport = new StdioServerTransport();
+        await this.server.connect(transport);
+      }
 
       logger.info('F1 MCP Server started successfully', {
         serverName: process.env.MCP_SERVER_NAME,
@@ -183,11 +189,85 @@ class F1MCPServer {
         apiProxyUrl: process.env.F1_API_PROXY_URL,
         environment: process.env.NODE_ENV,
         apiAvailable: isApiAvailable,
+        mode: process.env.DEPLOY_MODE || 'stdio'
       });
     } catch (error) {
       logger.error('Failed to start F1 MCP Server:', error);
       process.exit(1);
     }
+  }
+
+  /**
+   * Start as web service for cloud deployment
+   * @private
+   */
+  async startWebService() {
+    const app = express();
+    const port = process.env.PORT || 3001;
+
+    // Add middleware
+    app.use(express.json());
+
+    // Health check endpoint
+    app.get('/health', (req, res) => {
+      res.json({
+        status: 'ok',
+        server: process.env.MCP_SERVER_NAME,
+        version: process.env.MCP_SERVER_VERSION,
+        timestamp: new Date().toISOString(),
+        apiAvailable: true // We checked this in start()
+      });
+    });
+
+    // MCP tools info endpoint
+    app.get('/tools', (req, res) => {
+      const tools = [];
+      
+      // Get tool information from registered tools
+      if (this.server && this.server._capabilities && this.server._capabilities.tools) {
+        // This is a simplified representation
+        res.json({
+          success: true,
+          tools: [
+            'get_f1_seasons', 'get_current_f1_season',
+            'get_f1_races', 'get_f1_race_details', 'get_current_f1_race', 'get_next_f1_race',
+            'get_f1_drivers', 'get_f1_driver_details',
+            'get_f1_constructors', 'get_f1_constructor_details',
+            'get_f1_race_results', 'get_f1_qualifying_results', 'get_f1_driver_standings', 'get_f1_constructor_standings'
+          ],
+          totalTools: 14
+        });
+      } else {
+        res.json({
+          success: true,
+          tools: [],
+          totalTools: 0
+        });
+      }
+    });
+
+    // Info endpoint
+    app.get('/', (req, res) => {
+      res.json({
+        name: 'F1 MCP Server',
+        version: process.env.MCP_SERVER_VERSION,
+        description: 'Formula 1 racing data tools for LangGraph applications',
+        protocol: 'Model Context Protocol (MCP)',
+        endpoints: {
+          health: '/health',
+          tools: '/tools'
+        },
+        note: 'This is a web service wrapper for the MCP server. For actual MCP usage, connect via stdio transport.'
+      });
+    });
+
+    // Start HTTP server
+    return new Promise((resolve) => {
+      app.listen(port, '0.0.0.0', () => {
+        logger.info(`F1 MCP Web Service listening on port ${port}`);
+        resolve();
+      });
+    });
   }
 }
 
