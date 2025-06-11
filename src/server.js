@@ -200,12 +200,55 @@ class F1MCPServer {
   /**
    * Start as web service for cloud deployment
    * @private
-   */
-  async startWebService() {
+   */ async startWebService() {
     const app = express();
     const port = process.env.PORT || 3001;
 
-    // Add middleware
+    // CORS configuration for f1-client integration
+    const corsOptions = {
+      origin: process.env.CORS_ORIGIN || [
+        'http://localhost:3000', // React dev server default
+        'http://localhost:3001', // Vite dev server
+        'http://localhost:5173', // Vite dev server alternative
+        'https://f1-client-ui.onrender.com', // Production UI (when deployed)
+        '*', // Allow all origins in development
+      ],
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    };
+
+    // Add CORS middleware
+    app.use((req, res, next) => {
+      const origin = req.headers.origin;
+      const allowedOrigins = Array.isArray(corsOptions.origin)
+        ? corsOptions.origin
+        : [corsOptions.origin];
+
+      if (corsOptions.origin === '*' || allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin || '*');
+      }
+
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header(
+        'Access-Control-Allow-Methods',
+        corsOptions.methods.join(', '),
+      );
+      res.header(
+        'Access-Control-Allow-Headers',
+        corsOptions.allowedHeaders.join(', '),
+      );
+
+      // Handle preflight requests
+      if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+      }
+
+      next();
+    });
+
+    // Add other middleware
     app.use(express.json());
 
     // Health check endpoint
