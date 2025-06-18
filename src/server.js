@@ -158,18 +158,18 @@ class F1MCPServer {
       const isApiAvailable = await f1ApiClient.healthCheck();
 
       if (isApiAvailable) {
-        logger.info('F1 API proxy connection verified');
+        logger.info('Jolpica F1 API connection verified');
       } else {
         if (process.env.NODE_ENV === 'production') {
           logger.warn(
-            'F1 API proxy not available, but continuing in production mode',
+            'Jolpica F1 API not available, but continuing in production mode',
             {
-              apiProxyUrl: process.env.F1_API_PROXY_URL,
+              jolpicaApiUrl: process.env.JOLPICA_API_URL,
             },
           );
         } else {
           throw new Error(
-            'F1 API proxy is not available and required in development mode',
+            'Jolpica F1 API is not available and required in development mode',
           );
         }
       }
@@ -186,7 +186,7 @@ class F1MCPServer {
       logger.info('F1 MCP Server started successfully', {
         serverName: process.env.MCP_SERVER_NAME,
         version: process.env.MCP_SERVER_VERSION,
-        apiProxyUrl: process.env.F1_API_PROXY_URL,
+        jolpicaApiUrl: process.env.JOLPICA_API_URL,
         environment: process.env.NODE_ENV,
         apiAvailable: isApiAvailable,
         mode: process.env.DEPLOY_MODE || 'stdio',

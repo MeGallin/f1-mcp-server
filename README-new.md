@@ -1,6 +1,6 @@
 # F1 MCP Server
 
-A comprehensive Model Context Protocol (MCP) server that provides Formula 1 racing data tools for LangGraph applications. This server connects to the F1 API Proxy and exposes structured F1 data through MCP-compliant tools.
+A comprehensive Model Context Protocol (MCP) server that provides Formula 1 racing data tools for LangGraph applications. This server connects directly to the Jolpica F1 API and exposes structured F1 data through MCP-compliant tools.
 
 ## 🏎️ Features
 
@@ -15,7 +15,7 @@ A comprehensive Model Context Protocol (MCP) server that provides Formula 1 raci
 ### Architecture
 
 - **MCP Protocol Compliance**: Full support for Model Context Protocol
-- **Service Integration**: Seamless connection to F1 API Proxy
+- **Direct API Access**: Direct connection to Jolpica F1 API with caching
 - **Error Handling**: Comprehensive error handling and logging
 - **Docker Support**: Containerized deployment ready
 - **Production Ready**: Structured logging, health checks, graceful shutdown
@@ -25,7 +25,7 @@ A comprehensive Model Context Protocol (MCP) server that provides Formula 1 raci
 ### Prerequisites
 
 - Node.js 18+
-- F1 API Proxy running (see `../f1-api-proxy/`)
+- Internet connection to access Jolpica F1 API
 - Docker (optional)
 
 ### Installation
@@ -52,7 +52,8 @@ MCP_SERVER_NAME=f1-mcp-server
 MCP_SERVER_VERSION=1.0.0
 MCP_HOST=localhost
 MCP_PORT=3001
-F1_API_PROXY_URL=http://localhost:8000
+JOLPICA_API_URL=http://api.jolpi.ca/ergast/f1
+CACHE_TTL_DEFAULT=300
 F1_API_TIMEOUT=10000
 LOG_LEVEL=info
 LOG_FORMAT=json
@@ -76,7 +77,7 @@ npm run lint:fix # Fix linting issues
 src/
 ├── server.js              # Main MCP server
 ├── services/
-│   └── f1ApiClient.js     # F1 API Proxy client
+│   └── f1ApiClient.js     # Direct Jolpica F1 API client
 ├── tools/                 # MCP tools
 │   ├── seasonsTools.js    # Season-related tools
 │   ├── racesTools.js      # Race-related tools

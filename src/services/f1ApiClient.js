@@ -1,15 +1,23 @@
 import axios from 'axios';
+import NodeCache from 'node-cache';
 import logger from '../utils/logger.js';
 
 /**
- * F1 API Client
- * Handles communication with the f1-api-proxy service
- * Provides structured access to Formula 1 racing data
+ * F1 API Client - Direct Jolpica API Access
+ * Handles communication directly with the Jolpica F1 API (bypassing proxy)
+ * Provides structured access to Formula 1 racing data with caching
  */
 class F1ApiClient {
   constructor() {
-    this.baseURL = process.env.F1_API_PROXY_URL || 'http://localhost:8000';
+    // Use Jolpica API directly instead of proxy
+    this.baseURL = process.env.JOLPICA_API_URL || 'http://api.jolpi.ca/ergast/f1';
     this.timeout = parseInt(process.env.F1_API_TIMEOUT) || 10000;
+    
+    // Initialize cache
+    this.cache = new NodeCache({ 
+      stdTTL: parseInt(process.env.CACHE_TTL_DEFAULT) || 300, // 5 minutes default
+      checkperiod: 120 
+    });
 
     // Create axios instance
     this.client = axios.create({
@@ -85,20 +93,74 @@ class F1ApiClient {
       return apiError;
     } else if (error.request) {
       // Request made but no response
-      const networkError = new Error('F1 API service unavailable');
+      const networkError = new Error('Jolpica F1 API service unavailable');
       networkError.code = 'NETWORK_ERROR';
       return networkError;
     } else {
       // Request setup error
       return error;
     }
-  } /**
-   * Health check - verify API proxy is available
+  }
+
+  /**
+   * Determine cache TTL based on data type
+   * @private
+   * @param {string} endpoint - API endpoint
+   * @returns {number} TTL in seconds
+   */
+  getCacheTTL(endpoint) {
+    if (endpoint.includes('current')) {
+      return 60; // 1 minute for current data
+    } else if (endpoint.includes('standings') || endpoint.includes('results')) {
+      return 300; // 5 minutes for results/standings
+    } else if (endpoint.includes('drivers') || endpoint.includes('constructors')) {
+      return 3600; // 1 hour for driver/constructor data
+    } else {
+      return 1800; // 30 minutes default
+    }
+  }
+
+  /**
+   * Generic method to make cached API calls
+   * @private
+   * @param {string} endpoint - API endpoint
+   * @returns {Promise<Object>} - API response data
+   */
+  async makeRequest(endpoint) {
+    const cacheKey = endpoint;
+    
+    // Check cache first
+    const cached = this.cache.get(cacheKey);
+    if (cached) {
+      logger.debug('Cache hit', { endpoint, cacheKey });
+      return cached;
+    }
+
+    try {
+      const response = await this.client.get(endpoint);
+      const data = response.data;
+
+      // Determine cache TTL based on endpoint
+      const ttl = this.getCacheTTL(endpoint);
+      
+      // Cache the response
+      this.cache.set(cacheKey, data, ttl);
+      logger.debug('Data cached', { endpoint, ttl });
+
+      return data;
+    } catch (error) {
+      logger.error('API request failed', { endpoint, error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Health check - verify Jolpica API is available
    * @returns {Promise<boolean>}
    */
   async healthCheck() {
     try {
-      const response = await this.client.get('/health');
+      const response = await this.client.get('/seasons.json', { params: { limit: 1 } });
       return response.status === 200;
     } catch (error) {
       logger.warn('F1 API health check failed', {
@@ -115,8 +177,12 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getSeasons() {
-    const response = await this.client.get('/seasons');
-    return response.data;
+    const data = await this.makeRequest('/seasons.json');
+    return {
+      success: true,
+      data: data.MRData?.SeasonTable?.Seasons || [],
+      total: data.MRData?.total || '0'
+    };
   }
 
   /**
@@ -124,8 +190,12 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getCurrentSeason() {
-    const response = await this.client.get('/seasons/current');
-    return response.data;
+    const data = await this.makeRequest('/current.json');
+    return {
+      success: true,
+      data: data.MRData?.RaceTable?.Races || [],
+      season: data.MRData?.RaceTable?.season || new Date().getFullYear().toString()
+    };
   }
 
   // ==================== RACES ====================
@@ -135,8 +205,12 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getRaces(season = 'current') {
-    const response = await this.client.get(`/races/${season}`);
-    return response.data;
+    const data = await this.makeRequest(`/${season}.json`);
+    return {
+      success: true,
+      data: data.MRData?.RaceTable?.Races || [],
+      season: data.MRData?.RaceTable?.season || season
+    };
   }
 
   /**
@@ -146,8 +220,13 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getRace(season, round) {
-    const response = await this.client.get(`/races/${season}/${round}`);
-    return response.data;
+    const data = await this.makeRequest(`/${season}/${round}.json`);
+    return {
+      success: true,
+      data: data.MRData?.RaceTable?.Races || [],
+      season: data.MRData?.RaceTable?.season || season,
+      round: data.MRData?.RaceTable?.round || round
+    };
   }
 
   /**
@@ -155,8 +234,12 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getCurrentRace() {
-    const response = await this.client.get('/races/current/current');
-    return response.data;
+    const data = await this.makeRequest('/current/current.json');
+    return {
+      success: true,
+      data: data.MRData?.RaceTable?.Races || [],
+      season: data.MRData?.RaceTable?.season || 'current'
+    };
   }
 
   /**
@@ -164,8 +247,12 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getNextRace() {
-    const response = await this.client.get('/races/current/next');
-    return response.data;
+    const data = await this.makeRequest('/current/next.json');
+    return {
+      success: true,
+      data: data.MRData?.RaceTable?.Races || [],
+      season: data.MRData?.RaceTable?.season || 'current'
+    };
   }
 
   // ==================== DRIVERS ====================
@@ -175,8 +262,12 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getDrivers(season = 'current') {
-    const response = await this.client.get(`/drivers/${season}`);
-    return response.data;
+    const data = await this.makeRequest(`/${season}/drivers.json`);
+    return {
+      success: true,
+      data: data.MRData?.DriverTable?.Drivers || [],
+      season: data.MRData?.DriverTable?.season || season
+    };
   }
 
   /**
@@ -186,21 +277,30 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getDriver(driverId, season = 'current') {
-    const response = await this.client.get(`/drivers/${season}/${driverId}`);
-    return response.data;
+    const data = await this.makeRequest(`/${season}/drivers/${driverId}.json`);
+    return {
+      success: true,
+      data: data.MRData?.DriverTable?.Drivers || [],
+      season: data.MRData?.DriverTable?.season || season,
+      driverId: driverId
+    };
   }
 
   // ==================== CONSTRUCTORS ====================
-
   /**
    * Get constructors for a specific season
    * @param {string|number} season - Season year or 'current'
    * @returns {Promise<Object>}
    */
   async getConstructors(season = 'current') {
-    const response = await this.client.get(`/constructors/${season}`);
-    return response.data;
+    const data = await this.makeRequest(`/${season}/constructors.json`);
+    return {
+      success: true,
+      data: data.MRData?.ConstructorTable?.Constructors || [],
+      season: data.MRData?.ConstructorTable?.season || season
+    };
   }
+
   /**
    * Get specific constructor information
    * @param {string} constructorId - Constructor ID
@@ -208,14 +308,16 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getConstructor(constructorId, season = 'current') {
-    const response = await this.client.get(
-      `/constructors/${season}/${constructorId}`,
-    );
-    return response.data;
+    const data = await this.makeRequest(`/${season}/constructors/${constructorId}.json`);
+    return {
+      success: true,
+      data: data.MRData?.ConstructorTable?.Constructors || [],
+      season: data.MRData?.ConstructorTable?.season || season,
+      constructorId: constructorId
+    };
   }
 
   // ==================== RESULTS ====================
-
   /**
    * Get race results
    * @param {string|number} season - Season year or 'current'
@@ -223,8 +325,13 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getRaceResults(season, round) {
-    const response = await this.client.get(`/results/${season}/${round}`);
-    return response.data;
+    const data = await this.makeRequest(`/${season}/${round}/results.json`);
+    return {
+      success: true,
+      data: data.MRData?.RaceTable?.Races || [],
+      season: data.MRData?.RaceTable?.season || season,
+      round: data.MRData?.RaceTable?.round || round
+    };
   }
 
   /**
@@ -234,10 +341,13 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getQualifyingResults(season, round) {
-    const response = await this.client.get(
-      `/results/${season}/${round}/qualifying`,
-    );
-    return response.data;
+    const data = await this.makeRequest(`/${season}/${round}/qualifying.json`);
+    return {
+      success: true,
+      data: data.MRData?.RaceTable?.Races || [],
+      season: data.MRData?.RaceTable?.season || season,
+      round: data.MRData?.RaceTable?.round || round
+    };
   }
 
   /**
@@ -246,8 +356,12 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getDriverStandings(season = 'current') {
-    const response = await this.client.get(`/results/${season}/drivers`);
-    return response.data;
+    const data = await this.makeRequest(`/${season}/driverStandings.json`);
+    return {
+      success: true,
+      data: data.MRData?.StandingsTable?.StandingsLists || [],
+      season: data.MRData?.StandingsTable?.season || season
+    };
   }
 
   /**
@@ -256,8 +370,28 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getConstructorStandings(season = 'current') {
-    const response = await this.client.get(`/results/${season}/constructors`);
-    return response.data;
+    const data = await this.makeRequest(`/${season}/constructorStandings.json`);
+    return {
+      success: true,
+      data: data.MRData?.StandingsTable?.StandingsLists || [],
+      season: data.MRData?.StandingsTable?.season || season
+    };
+  }
+
+  /**
+   * Clear cache (useful for testing or forced refresh)
+   */
+  clearCache() {
+    this.cache.flushAll();
+    logger.info('Cache cleared');
+  }
+
+  /**
+   * Get cache statistics
+   * @returns {Object} - Cache stats
+   */
+  getCacheStats() {
+    return this.cache.getStats();
   }
 }
 
