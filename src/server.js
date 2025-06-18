@@ -302,6 +302,67 @@ class F1MCPServer {
       }
     });
 
+    // Tool invocation endpoint for HTTP access
+    app.post('/tools/invoke', async (req, res) => {
+      try {
+        const { tool: toolName, parameters = {} } = req.body;
+
+        if (!toolName) {
+          return res.status(400).json({
+            success: false,
+            error: 'Tool name is required'
+          });
+        }
+
+        // Get all available tools
+        const allTools = [
+          ...seasonsTools.getTools(),
+          ...racesTools.getTools(),
+          ...driversTools.getTools(),
+          ...constructorsTools.getTools(),
+          ...resultsTools.getTools(),
+        ];
+
+        // Find the requested tool
+        const tool = allTools.find((t) => t.name === toolName);
+
+        if (!tool) {
+          return res.status(404).json({
+            success: false,
+            error: `Unknown tool: ${toolName}`,
+            availableTools: allTools.map(t => t.name)
+          });
+        }
+
+        // Execute the tool
+        const request = {
+          params: {
+            name: toolName,
+            arguments: parameters
+          }
+        };
+
+        const result = await tool.handler(request);
+
+        // Return the result
+        res.json({
+          success: true,
+          tool: toolName,
+          parameters,
+          result: result.content || result,
+          timestamp: new Date().toISOString()
+        });
+
+      } catch (error) {
+        logger.error('Tool invocation error:', error);
+        res.status(500).json({
+          success: false,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
     // Info endpoint
     app.get('/', (req, res) => {
       res.json({
@@ -312,6 +373,7 @@ class F1MCPServer {
         endpoints: {
           health: '/health',
           tools: '/tools',
+          invoke: '/tools/invoke',
         },
         note: 'This is a web service wrapper for the MCP server. For actual MCP usage, connect via stdio transport.',
       });
