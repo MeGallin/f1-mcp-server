@@ -234,7 +234,7 @@ class F1ApiClient {
    * @returns {Promise<Object>}
    */
   async getCurrentRace() {
-    const data = await this.makeRequest('/current/current.json');
+    const data = await this.makeRequest('/current/last.json');
     return {
       success: true,
       data: data.MRData?.RaceTable?.Races || [],
