@@ -8,6 +8,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import express from 'express';
+import cron from 'node-cron';
 import logger from './utils/logger.js';
 import f1ApiClient from './services/f1ApiClient.js';
 
@@ -40,6 +41,7 @@ class F1MCPServer {
     this.setupErrorHandling();
     this.registerTools();
     this.setupRequestHandlers();
+    this.setupCronJobs();
   }
 
   /**
@@ -68,6 +70,29 @@ class F1MCPServer {
       process.exit(0);
     });
   }
+
+  /**
+   * Setup cron jobs for maintenance tasks
+   * @private
+   */
+  setupCronJobs() {
+    // Run every 30 seconds - health check and cache maintenance
+    cron.schedule('*/30 * * * * *', async () => {
+      try {
+        // Health check
+        const isHealthy = await f1ApiClient.healthCheck();
+        logger.debug('Scheduled health check completed', { isHealthy });
+        
+        // Optional: Add cache cleanup or other maintenance tasks here
+        
+      } catch (error) {
+        logger.error('Scheduled health check failed:', error);
+      }
+    });
+
+    logger.info('Cron jobs scheduled: health check every 30 seconds');
+  }
+
   /**
    * Register all F1 tools with the MCP server
    * @private
